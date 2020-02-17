@@ -20,6 +20,7 @@ shen-luajit is a port of the Shen language that runs on top of Luajit.
 Building
 --------
 ```
+git clone https://github.com/jmars/shen-luajit.git
 cd shen-luajit
 make
 ```
