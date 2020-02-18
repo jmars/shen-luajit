@@ -474,7 +474,7 @@ local function equals(a, b)
       end
       return true
     elseif a.cons and b.cons then
-      if a.hd == b.hd then
+      if equals(a.hd, b.hd) then
         return equals(a.tl, b.tl)
       else
         return false
