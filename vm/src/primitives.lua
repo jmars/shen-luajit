@@ -319,6 +319,12 @@ local function str(value)
       return value.value
     elseif type(value.f) == 'function' then
       return "#<function>"
+    elseif value.cons then
+      if value.hd == nil and value.tl == nil then
+        return '[]'
+      else
+        return '[cons '..str(value.hd)..' '..str(value.tl)..']'
+      end
     end
   else
     return tostring(value)
@@ -441,13 +447,18 @@ builtins['read-byte'] = function(namespace, scope, ast)
 end
 
 builtins['open'] = binary(function(path, config)
+  local stream
   if config.value == 'in' then
-    return io.open(path, 'rb')
+    stream = io.open(path, 'rb')
   elseif config.value == 'out' then
-    return io.open(path, 'wb')
+    stream = io.open(path, 'wb')
   else
-    error('invalid stream type')
+    error({ error = true, value = 'invalid stream type' })
   end
+  if stream == nil then
+    error({ error = true, value = 'failed to open ' .. path })
+  end
+  return stream
 end)
 
 builtins['close'] = function(namespace, scope, ast)

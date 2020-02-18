@@ -49,9 +49,6 @@ local function createCompiler(builtins)
       if index >= 1 then
         return function(...)
           local r = select(index, ...)
-          if r == nil then
-            error({ error = true, value = "invalid var" })
-          end
           return r
         end
       else
