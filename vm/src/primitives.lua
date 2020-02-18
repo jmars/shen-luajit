@@ -317,6 +317,8 @@ local function str(value)
       return value.value
     elseif value.error then
       return value.value
+    elseif type(value.f) == 'function' then
+      return "#<function>"
     end
   else
     return tostring(value)
