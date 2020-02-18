@@ -31,11 +31,12 @@ local function apply(f, n, ...)
   local args = { ... }
   if n < f.a then
     return F(f.a - n, function(...)
+      local new = { unpack(args) }
       local next = { ... }
       for i = 1, #next do
-        args[i + #args] = next[i]
+        new[i + #new] = next[i]
       end
-      return f.f(unpack(args))
+      return f.f(unpack(new))
     end)
   end
   if n > f.a then
