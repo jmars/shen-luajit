@@ -433,7 +433,7 @@ builtins['read-byte'] = function(namespace, scope, ast)
   local arg = compile(namespace, scope, ast[2])
   return function(...)
     local stream = arg(...)
-    local c = ffi.C.fgetc(io.stdin)
+    local c = ffi.C.fgetc(stream)
     return c
   end
 end
@@ -527,11 +527,16 @@ builtins['eval-kl'] = function(namespace, scope, ast)
   end
 end
 
-local counter = 0
+local start_time = os.time(os.date("!*t"))
 builtins['get-time'] = function(namespace, scope, ast)
+  local arg = compile(namespace, scope, ast[2])
   return function(...)
-    counter = counter + 1
-    return counter
+    local s = arg(...).value
+    if s == "unix" then
+      return os.time(os.date("!*t"))
+    else
+      return os.time(os.date("!*t")) - start_time
+    end
   end
 end
 
