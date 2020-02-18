@@ -48,11 +48,11 @@ local function createCompiler(builtins)
       local index = find(scope, ast.value)
       if index >= 1 then
         return function(...)
-          local env = { ... }
-          if env[index] == nil then
-            error({ error = true, value = "invalid var: " .. ast.value})
+          local r = select(index, ...)
+          if r == nil then
+            error({ error = true, value = "invalid var" })
           end
-          return env[index]
+          return r
         end
       else
         local value = { symbol = true, value = ast.value }
