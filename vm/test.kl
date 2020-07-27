@@ -1,0 +1,3 @@
+(defun shen.fillvector (V1944 V1945 V1946 V1947) (cond ((= V1946 V1945) (address-> V1944 V1946 V1947)) (true (shen.fillvector (address-> V1944 V1945 V1947) (+ 1 V1945) V1946 V1947))))
+
+(defun test () (shen.fillvector (absvector 20000) 0 20000 x))

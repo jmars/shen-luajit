@@ -1,18 +1,22 @@
 local bundle = require('luvi').bundle
 loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
 
+require '/fun' ()
+
+-- local STP = require "/stacktrace"
+-- debug.traceback = STP.stacktrace
+
 local readKl = require '/src/reader'
 local sexpToAst = require '/src/parser'
-local map, F, apply, makeNamespace = unpack(require '/src/runtime')
+local F, apply, makeNamespace = unpack(require '/src/runtime')
 local builtins, compile = unpack(require '/src/primitives')
+local pprint = require '/pprint'
 
 local function execKl(namespace, file)
   local ast = sexpToAst(readKl(file)).value
-  local last
-  for i = 1, #ast do
-    local func = compile(namespace, {}, ast[i])
-    last = func({})
-  end
+  return reduce(function(last, node)
+    return compile(namespace, {}, node)({})
+  end, nil, ast)
 end
 
 local function bootstrap()
@@ -34,9 +38,12 @@ local function bootstrap()
   execKl(namespace, "./klambda/types.kl")
   execKl(namespace, "./klambda/init.kl")
   local init = namespace.functions['shen.initialise']
-  apply(init, 0)
+  apply(init, {})
   local repl = namespace.functions['shen.repl']
-  apply(repl, 0)
+  apply(repl, {})
+  -- execKl(namespace, './test.kl')
+  -- local test = namespace.functions['test']
+  -- pprint(apply(test, {}))
 end
 
 bootstrap()

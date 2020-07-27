@@ -1,47 +1,35 @@
--- TODO: remove for varargs
-local function map(f, list)
-  local res = {}
-  for i = 1, #list do
-    res[i] = f(list[i])
-  end
-  return res
-end
+local pprint = require '/pprint'
 
-function find(table, element)
-  for i = 1, #table do
-    local el = table[i]
-    if el == element then
-      return i
-    end
-  end
-  return -1
-end
 
 local function F(arity, fun)
   return {
+    type = "function",
     a = arity,
     f = fun,
   }
 end
 
-local function apply(f, n, ...)
-  if f.a == n then
-    return f.f(...)
+local function apply(f, list)
+  local args = totable(list) -- force fun.lua to evaluate
+  if f.type ~= "function" then
+    pprint(f, args)
+    error("Tried to apply non-function")
   end
-  local args = { ... }
+  -- match
+  local n = length(args)
+  if f.a == n then
+    return f.f(args)
+  end
+  -- underapply
   if n < f.a then
-    return F(f.a - n, function(...)
-      local new = { unpack(args) }
-      local next = { ... }
-      for i = 1, #next do
-        new[i + #new] = next[i]
-      end
-      return f.f(unpack(new))
+    return F(f.a - n, function(next)
+      return f.f(chain(args, next))
     end)
   end
+  -- overapply
   if n > f.a then
-    local res = f.f(unpack(args, 1, n))
-    return apply(res, n - f.a, unpack(args, n))
+    local res = f.f(take_n(n, args))
+    return apply(res, drop_n(n, args))
   end
 end
 
@@ -74,4 +62,4 @@ local function makeNamespace()
   }
 end
 
-return { map, F, apply, makeNamespace, find }
+return { F, apply, makeNamespace }
