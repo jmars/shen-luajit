@@ -10,7 +10,7 @@ local function binary(op)
   return function(namespace, scope, ast)
     local args = map(function(arg) return compile(namespace, scope, arg) end, tail(ast))
     local f = F(2, function(args)
-      return op(nth(1, args), nth(2, args))
+      return op(args[1], args[2])
     end)
     return function(env)
       local argVals = map(function(arg) return arg(env) end, args)
@@ -23,7 +23,7 @@ local function ternary(op)
   return function(namespace, scope, ast)
     local args = map(function(arg) return compile(namespace, scope, arg) end, tail(ast))
     local f = F(3, function(args)
-      return op(nth(1, args), nth(2, args), nth(3, args))
+      return op(args[1], args[2], args[3])
     end)
     return function(env)
       local argVals = map(function(arg) return arg(env) end, args)
@@ -34,14 +34,14 @@ end
 
 -- functions and bindings
 builtins['defun'] = function(namespace, scope, ast)
-  local name = nth(2, ast).value
-  local args = map(function(node) return node.value end, nth(3, ast).value)
-  local newScope = iter({})
-  if length(args) > 0 then
+  local name = ast[2].value
+  local args = map(function(node) return node.value end, ast[3].value)
+  local newScope = {}
+  if #args > 0 then
     newScope = args
   end
-  local body = compile(namespace, newScope, nth(4, ast))
-  local f = F(length(args), function(args)
+  local body = compile(namespace, newScope, ast[4])
+  local f = F(#args, function(args)
     return body(args)
   end)
   return function()
@@ -51,28 +51,28 @@ builtins['defun'] = function(namespace, scope, ast)
 end
 
 builtins['lambda'] = function(namespace, scope, ast)
-  local argName = nth(2, ast).value
-  local newScope = iter({ argName })
-  if length(scope) > 0 then
-    newScope = chain({ argName }, scope)
+  local argName = ast[2].value
+  local newScope = { argName }
+  if #scope > 0 then
+    newScope = { argName, unpack(scope) }
   end
-  local body = compile(namespace, newScope, nth(3, ast))
+  local body = compile(namespace, newScope, ast[3])
   return function(env)
     return F(1, function(args)
-      return body(chain(args, env))
+      return body({ args[1], unpack(env) })
     end)
   end
 end
 
 builtins['freeze'] = function(namespace, scope, ast)
-  local body = compile(namespace, scope, nth(2, ast))
+  local body = compile(namespace, scope, ast[2])
   return function(env)
     return { frozen = true, body = body, env = env }
   end
 end
 
 builtins['thaw'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local frozen = arg(env)
     return frozen.body(frozen.env)
@@ -80,41 +80,43 @@ builtins['thaw'] = function(namespace, scope, ast)
 end
 
 builtins['let'] = function(namespace, scope, ast)
-  local name = nth(2, ast).value
-  local value = compile(namespace, scope, nth(3, ast))
+  local name = ast[2].value
+  local value = compile(namespace, scope, ast[3])
   local newScope = { name }
-  if length(scope) > 0 then
-    newScope = chain({ name }, scope)
+  if #scope > 0 then
+    newScope = { name, unpack(scope) }
   end
-  local body = compile(namespace, newScope, nth(4, ast))
+  local body = compile(namespace, newScope, ast[4])
   return function(env)
     local binding = value(env)
-    return body(chain({ binding }, env))
+    return body({binding, unpack(env)})
   end
 end
 
 builtins['do'] = function(namespace, scope, ast)
   local args = map(function(node) return compile(namespace, scope, node) end, tail(ast))
   return function(env)
-    return reduce(function(last, x)
-      return x(env)
-    end, nil, args)
+    local last
+    for i=1,#args do
+      last = args[i](env)
+    end
+    return last
   end
 end
 
 -- conditionals
 builtins['or'] = function(namespace, scope, ast)
-  if length(ast) == 3 then
+  if #ast == 3 then
     local args = map(function(node) return compile(namespace, scope, node) end, tail(ast))
     return function(env)
-      local cond = head(args)(env)
+      local cond = args[1](env)
       if type(cond) ~= 'boolean' then
         error({ error = true, value = 'if: cond not a bool' })
       end
       if cond then
         return true
       else
-        return nth(2, args)(env)
+        return args[2](env)
       end
     end
   else
@@ -124,17 +126,17 @@ builtins['or'] = function(namespace, scope, ast)
 end
 
 builtins['and'] = function(namespace, scope, ast)
-  if length(ast) == 3 then
+  if #ast == 3 then
     local args = map(function(node) return compile(namespace, scope, node) end, tail(ast))
     return function(env)
-      local cond = head(args)(env)
+      local cond = args[1](env)
       if type(cond) ~= 'boolean' then
         error({ error = true, value = 'if: cond not a bool' })
       end
       if not cond then
         return false
       else
-        return nth(2, args)(env)
+        return args[2](env)
       end
     end
   else
@@ -144,13 +146,13 @@ builtins['and'] = function(namespace, scope, ast)
 end
 
 builtins['if'] = function(namespace, scope, ast)
-  if length(ast) == 4 then
+  if #ast == 4 then
     local args = map(function(node) return compile(namespace, scope, node) end, tail(ast))
     return function(env)
-      if head(args)(env) == true then
-        return nth(2, args)(env)
+      if args[1](env) == true then
+        return args[2](env)
       else
-        return nth(3, args)(env)
+        return args[3](env)
       end
     end
   else
@@ -160,12 +162,12 @@ end
 
 builtins['cond'] = function(namespace, scope, ast)
   local args = map(function(node)
-    return { compile(namespace, scope, nth(1, node.value)), compile(namespace, scope, nth(2, node.value)) }
+    return { compile(namespace, scope, node.value[1]), compile(namespace, scope, node.value[2]) }
   end, tail(ast))
   return function(env) 
-    for i = 1, length(args) do
-      if head(nth(i, args))(env) == true then
-        return nth(2, nth(i, args))(env)
+    for i = 1, #args do
+      if args[i][1](env) == true then
+        return args[i][2](env)
       end
     end
     error("No condition evaluated to true")
@@ -174,8 +176,8 @@ end
 
 -- error handling
 builtins['trap-error'] = function(namespace, scope, ast)
-  local body = compile(namespace, scope, nth(2, ast))
-  local handler = compile(namespace, scope, nth(3, ast))
+  local body = compile(namespace, scope, ast[2])
+  local handler = compile(namespace, scope, ast[3])
   return function(env)
     local status, result = pcall(body, env)
     if status == true then
@@ -194,7 +196,7 @@ builtins['trap-error'] = function(namespace, scope, ast)
 end
 
 builtins['simple-error'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local val = arg(env)
     if type(val) ~= 'string' then
@@ -206,7 +208,7 @@ builtins['simple-error'] = function(namespace, scope, ast)
 end
 
 builtins['error-to-string'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local err = arg(env)
     if type(err) == 'table' and err.error then
@@ -219,7 +221,7 @@ end
 
 -- symbols
 builtins['intern'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local value = arg(env)
     if value == 'true' then
@@ -233,8 +235,8 @@ builtins['intern'] = function(namespace, scope, ast)
 end
 
 builtins['set'] = function(namespace, scope, ast)
-  local name = compile(namespace, scope, nth(2, ast))
-  local value = compile(namespace, scope, nth(3, ast))
+  local name = compile(namespace, scope, ast[2])
+  local value = compile(namespace, scope, ast[3])
   return function(env)
     local n = name(env)
     local v = value(env)
@@ -244,7 +246,7 @@ builtins['set'] = function(namespace, scope, ast)
 end
 
 builtins['value'] = function(namespace, scope, ast)
-  local name = compile(namespace, scope, nth(2, ast))
+  local name = compile(namespace, scope, ast[2])
   return function(env)
     local n = name(env)
     local val = namespace.globals[n.value]
@@ -258,7 +260,7 @@ end
 
 -- numerics
 builtins['number?'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     return type(arg(env)) == 'number'
   end
@@ -275,7 +277,7 @@ builtins['<='] = binary(function(a, b) return a >= b end)
 
 -- strings
 builtins['string?'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     return type(arg(env)) == 'string'
   end
@@ -291,7 +293,7 @@ builtins['pos'] = binary(function(str, i)
 end)
 
 builtins['tlstr'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local str = arg(env)
     if str == '' then
@@ -330,21 +332,21 @@ local function str(value)
 end
 
 builtins['str'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     return str(arg(env))
   end
 end
 
 builtins['string->n'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     return string.byte(arg(env))
   end
 end
 
 builtins['n->string'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     return string.char(arg(env))
   end
@@ -352,7 +354,7 @@ end
 
 -- vectors
 builtins['absvector'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local length = arg(env)
     return { vector = true, size = length }
@@ -379,7 +381,7 @@ builtins['<-address'] = binary(function(vec, i)
 end)
 
 builtins['absvector?'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local v = arg(env)
     return type(v) == 'table' and v.vector or false
@@ -388,7 +390,7 @@ end
 
 -- conses
 builtins['cons?'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local v = arg(env)
     return (type(v) == 'table' and v.cons and v.hd ~= nil and v.tl ~= nil) or false
@@ -396,8 +398,8 @@ builtins['cons?'] = function(namespace, scope, ast)
 end
 
 builtins['cons'] = function(namespace, scope, ast)
-  local value = compile(namespace, scope, nth(2, ast))
-  local list = compile(namespace, scope, nth(3, ast))
+  local value = compile(namespace, scope, ast[2])
+  local list = compile(namespace, scope, ast[3])
   return function(env)
     local v = value(env)
     local l = list(env)
@@ -406,7 +408,7 @@ builtins['cons'] = function(namespace, scope, ast)
 end
 
 builtins['hd'] = function(namespace, scope, ast)
-  local value = compile(namespace, scope, nth(2, ast))
+  local value = compile(namespace, scope, ast[2])
   return function(env)
     local list = value(env)
     if list.hd == nil then
@@ -418,7 +420,7 @@ builtins['hd'] = function(namespace, scope, ast)
 end
 
 builtins['tl'] = function(namespace, scope, ast)
-  local value = compile(namespace, scope, nth(2, ast))
+  local value = compile(namespace, scope, ast[2])
   return function(env)
     local list = value(env)
     if list.tl == nil then
@@ -442,7 +444,7 @@ ffi.cdef[[
 
 builtins['read-byte'] = function(namespace, scope, ast)
   -- TODO: error handling
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local stream = arg(env)
     local c = ffi.C.fgetc(stream)
@@ -466,7 +468,7 @@ builtins['open'] = binary(function(path, config)
 end)
 
 builtins['close'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local stream = arg(env)
     stream:close()
@@ -536,7 +538,7 @@ listToAst = function(list)
 end
 
 builtins['eval-kl'] = function(namespace, scope, ast)
-  local body = compile(namespace, scope, nth(2, ast))
+  local body = compile(namespace, scope, ast[2])
   return function(env)
     local res = body(env)
     local body = compile(namespace, scope, valToAst(res))
@@ -546,7 +548,7 @@ end
 
 local start_time = os.time(os.date("!*t"))
 builtins['get-time'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local s = arg(env).value
     if s == "unix" then
@@ -562,7 +564,7 @@ builtins['type'] = binary(function(v, ty)
 end)
 
 builtins['boolean?'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local res = arg(env)
     return res == true or res == false
@@ -570,7 +572,7 @@ builtins['boolean?'] = function(namespace, scope, ast)
 end
 
 builtins['symbol?'] = function(namespace, scope, ast)
-  local arg = compile(namespace, scope, nth(2, ast))
+  local arg = compile(namespace, scope, ast[2])
   return function(env)
     local res = arg(env)
     return type(res) == 'table' and res.symbol or false

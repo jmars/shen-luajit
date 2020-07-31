@@ -1,8 +1,6 @@
 local bundle = require('luvi').bundle
 loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
 
-require '/fun' ()
-
 -- local STP = require "/stacktrace"
 -- debug.traceback = STP.stacktrace
 
@@ -14,9 +12,11 @@ local pprint = require '/pprint'
 
 local function execKl(namespace, file)
   local ast = sexpToAst(readKl(file)).value
-  return reduce(function(last, node)
-    return compile(namespace, {}, node)({})
-  end, nil, ast)
+  local last
+  for i=1, #ast do
+    last = compile(namespace, {}, ast[i])({})
+  end
+  return last
 end
 
 local function bootstrap()

@@ -8,7 +8,7 @@ local function createCompiler(builtins)
   local function compile(namespace, scope, ast)
     if ast.type == 'list' then
       local values = ast.value
-      local car = nth(1, values)
+      local car = values[1]
       if #values == 0 then
         return emptylist
       end
@@ -47,7 +47,7 @@ local function createCompiler(builtins)
       local index = index(ast.value, scope) or -1
       if index >= 1 then
         return function(env)
-          local r = nth(index, env)
+          local r = env[index]
           return r
         end
       else

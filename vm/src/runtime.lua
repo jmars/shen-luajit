@@ -9,14 +9,13 @@ local function F(arity, fun)
   }
 end
 
-local function apply(f, list)
-  local args = totable(list) -- force fun.lua to evaluate
+local function apply(f, args)
   if f.type ~= "function" then
     pprint(f, args)
     error("Tried to apply non-function")
   end
   -- match
-  local n = length(args)
+  local n = #args
   if f.a == n then
     return f.f(args)
   end
@@ -60,6 +59,31 @@ local function makeNamespace()
     functions = {},
     globals = globals
   }
+end
+
+function map(f, t)
+  local r = {}
+  for i=1, #t do
+    table.insert(r, f(t[i]))
+  end
+  return r
+end
+
+function tail(t)
+  local r = {}
+  for i=2,#t do
+    table.insert(r, t[i])
+  end
+  return r
+end
+
+function index(v, t)
+  for i=1,#t do
+    if t[i] == v then
+      return i
+    end
+  end
+  return -1
 end
 
 return { F, apply, makeNamespace }
