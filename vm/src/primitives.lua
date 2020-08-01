@@ -579,18 +579,6 @@ builtins['symbol?'] = function(namespace, scope, ast)
   end
 end
 
---[[
-each(function(k, v)
-  builtins[k] = function(...)
-    local real = v(...)
-    return function(env)
-      print(k)
-      return real(env)
-    end
-  end
-end, builtins)
-]]
-
 compile = createCompiler(builtins)
 
 return { builtins, compile }

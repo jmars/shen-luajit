@@ -22,13 +22,17 @@ local function apply(f, args)
   -- underapply
   if n < f.a then
     return F(f.a - n, function(next)
-      return f.f(chain(args, next))
+      local new = { unpack(args) }
+      for i = 1, #next do
+        new[i + #new] = next[i]
+      end
+      return f.f(new)
     end)
   end
   -- overapply
   if n > f.a then
-    local res = f.f(take_n(n, args))
-    return apply(res, drop_n(n, args))
+    local res = f.f({ unpack(args, 1, n) })
+    return apply(res, { unpack(args, n) })
   end
 end
 
