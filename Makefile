@@ -12,15 +12,15 @@ clean:
 	rm -rf deps/luvi
 	git checkout deps
 	rm -rf vm/klambda
-	rm -rf ShenOSKernel-22.2.tar.gz
-	rm -rf ShenOSKernel-22.2
+	rm -rf ShenOSKernel-22.3.tar.gz
+	rm -rf ShenOSKernel-22.3
 
 distclean: clean
 	rm shen
 
-ShenOSKernel-22.2.tar.gz:
-	wget https://github.com/Shen-Language/shen-sources/releases/download/shen-22.2/ShenOSKernel-22.2.tar.gz
+ShenOSKernel-22.3.tar.gz:
+	wget https://github.com/Shen-Language/shen-sources/releases/download/shen-22.3/ShenOSKernel-22.3.tar.gz
 
-vm/klambda: ShenOSKernel-22.2.tar.gz
-	tar -xvf ShenOSKernel-22.2.tar.gz
-	cp -r ShenOSKernel-22.2/klambda vm/klambda
+vm/klambda: ShenOSKernel-22.3.tar.gz
+	tar -xvf ShenOSKernel-22.3.tar.gz
+	cp -r ShenOSKernel-22.3/klambda vm/klambda
