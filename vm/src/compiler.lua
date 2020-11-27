@@ -1,4 +1,4 @@
-local F, apply, makeNamespace = unpack(require '/src/runtime')
+local F, makeNamespace = unpack(require '/src/runtime')
 
 local function emptylist()
   return { cons = true }
@@ -26,7 +26,7 @@ local function createCompiler(builtins)
         return function(env)
           local argVals = map(function(arg) return arg(env) end, args)
           local f = namespace.functions[car.value]
-          return apply(f, argVals)
+          return f(argVals)
         end
       else
         local f = compile(namespace, scope, car)
@@ -34,7 +34,7 @@ local function createCompiler(builtins)
         return function(env)
           local argVals = map(function(arg) return arg(env) end, args)
           local lam = f(env)
-          return apply(lam, argVals)
+          return lam(argVals)
         end
       end
     elseif ast.type == 'string' or ast.type == 'number' or ast.type == 'boolean' then

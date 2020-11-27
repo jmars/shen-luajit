@@ -1,15 +1,9 @@
 local pprint = require '/pprint'
 
+local funcMT = {}
 
-local function F(arity, fun)
-  return {
-    type = "function",
-    a = arity,
-    f = fun,
-  }
-end
-
-local function apply(f, args)
+function funcMT:__call(args)
+  local f = self
   if f.type ~= "function" then
     pprint(f, args)
     error("Tried to apply non-function")
@@ -32,8 +26,17 @@ local function apply(f, args)
   -- overapply
   if n > f.a then
     local res = f.f({ unpack(args, 1, n) })
-    return apply(res, { unpack(args, n) })
+    return res({ unpack(args, n) })
   end
+end
+
+
+local function F(arity, fun)
+  return setmetatable({
+    type = "function",
+    a = arity,
+    f = fun,
+  }, funcMT)
 end
 
 function capture(cmd, raw)
@@ -90,4 +93,4 @@ function index(v, t)
   return -1
 end
 
-return { F, apply, makeNamespace }
+return { F, makeNamespace }

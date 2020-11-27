@@ -6,9 +6,9 @@ loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
 
 local readKl = require '/src/reader'
 local sexpToAst = require '/src/parser'
-local F, apply, makeNamespace = unpack(require '/src/runtime')
+local F, makeNamespace = unpack(require '/src/runtime')
 local builtins, compile = unpack(require '/src/primitives')
-local pprint = require '/pprint'
+-- local pprint = require '/pprint'
 
 local function execKl(namespace, file)
   local ast = sexpToAst(readKl(file)).value
@@ -38,9 +38,9 @@ local function bootstrap()
   execKl(namespace, "./klambda/types.kl")
   execKl(namespace, "./klambda/init.kl")
   local init = namespace.functions['shen.initialise']
-  apply(init, {})
+  init({})
   local repl = namespace.functions['shen.repl']
-  apply(repl, {})
+  repl({})
   -- execKl(namespace, './test.kl')
   -- local test = namespace.functions['test']
   -- pprint(apply(test, {}))

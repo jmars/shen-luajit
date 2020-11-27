@@ -1,5 +1,5 @@
 local ffi = require 'ffi'
-local F, apply, makeNamespace = unpack(require '/src/runtime')
+local F, makeNamespace = unpack(require '/src/runtime')
 local createCompiler = require '/src/compiler'
 local pprint = require '/pprint'
 
@@ -14,7 +14,7 @@ local function binary(op)
     end)
     return function(env)
       local argVals = map(function(arg) return arg(env) end, args)
-      return apply(f, argVals)
+      return f(argVals)
     end
   end
 end
@@ -27,7 +27,7 @@ local function ternary(op)
     end)
     return function(env)
       local argVals = map(function(arg) return arg(env) end, args)
-      return apply(f, argVals)
+      return f(argVals)
     end
   end
 end
@@ -190,7 +190,7 @@ builtins['trap-error'] = function(namespace, scope, ast)
         err = result
       end
       local lam = handler(env)
-      return apply(lam, { err })
+      return lam({ err })
     end
   end
 end
